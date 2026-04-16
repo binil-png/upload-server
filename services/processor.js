@@ -2,7 +2,7 @@ const pool = require('../db');
 const axios = require('axios');
 const FormData = require('form-data');
 const crypto = require('crypto');
-axios.defaults.headers.common['Authorization'] = 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJjbGluaWNfaWQiOiIwMTI3NDE0NilsInVzZXJfaWQiOiI3NzcwMDQ2liwic3BIY2lhbGl6YXRpb24iOiJxMSJ9.C-';
+axios.defaults.headers.common['Authorization'] = 'Bearer eyJ0eXAiOiJqd3QiLCJhbGciOiJIUzI1NiJ9.eyJjbGluaWNfaWQiOiIwMTI3NDE0NiIsInVzZXJfaWQiOiI3NzcwMDQ2Iiwic3BlY2lhbGl6YXRpb24iOiIxMSJ9.C-kIzmbvEl0lvQDHqtwMdJHWD0-NBirEJf3YhyECZNA';
 /**
  * Splits an array into chunks of a given size.
  */
