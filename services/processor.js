@@ -2,7 +2,7 @@ const pool = require('../db');
 const axios = require('axios');
 const FormData = require('form-data');
 const crypto = require('crypto');
-
+axios.defaults.headers.common['Authorization'] = 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJjbGluaWNfaWQiOiIwMTI3NDE0NilsInVzZXJfaWQiOiI3NzcwMDQ2liwic3BIY2lhbGl6YXRpb24iOiJxMSJ9.C-';
 /**
  * Splits an array into chunks of a given size.
  */
@@ -82,7 +82,7 @@ async function processBatch(patientIds, io) {
         
         // 3. Construct FormData
         const form = new FormData();
-        form.append('patientId', String(patientId));
+        form.append('patient_id', String(patientId));
         form.append('date', new Date().toISOString());
         
         batch.forEach((fileObj) => {
@@ -116,7 +116,7 @@ async function processBatch(patientIds, io) {
       console.log(`Successfully completed patient: ${patientId}`);
 
     } catch (error) {
-      console.error(`Error processing patient ${patientId}:`, error.message);
+      console.error(`Error processing patient ${patientId}:`,error.message);
       await updateStatus(patientId, 'Error', io, `Failed: ${error.message}`);
     }
   }
@@ -146,3 +146,5 @@ async function processBatch(patientIds, io) {
 module.exports = {
   processBatch
 };
+
+//eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJjbGluaWNfaWQiOiIwMTI3NDE0NilsInVzZXJfaWQiOiI3NzcwMDQ2liwic3BIY2lhbGl6YXRpb24iOiJxMSJ9.C-
