@@ -3,6 +3,30 @@ const router = express.Router();
 const pool = require('../db');
 const { processBatch } = require('../services/processor');
 
+// GET /api/last-batch
+// Returns the last processed end_id and the suggested next page.
+router.get('/last-batch', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT end FROM upload_status LIMIT 1');
+    const limit = parseInt(req.query.limit) || 50;
+
+    if (rows.length === 0) {
+      return res.json({ last_end_id: 0, next_page: 1 });
+    }
+
+    const lastEndId = rows[0].end;
+    const [countRows] = await pool.query('SELECT COUNT(*) as count FROM upload_patients WHERE id <= ?', [lastEndId]);
+    const count = countRows[0].count;
+    
+    const nextPage = Math.floor(count / limit) + 1;
+    res.json({ last_end_id: lastEndId, next_page: nextPage });
+  } catch (err) {
+    console.error('Error getting last batch:', err);
+    res.status(500).json({ error: 'Failed to get last batch status' });
+  }
+});
+
+
 // GET /api/patients
 // Returns a paginated list of patients from upload_patients.
 router.get('/patients', async (req, res) => {

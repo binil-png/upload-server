@@ -125,21 +125,32 @@ async function processBatch(patientIds, io) {
   // After processing all patients in the batch, update the global upload_status table
   try {
     if (patientIds.length > 0) {
-      const [rows] = await pool.query('SELECT MIN(id) as start_id, MAX(id) as end_id FROM upload_patients WHERE patient_id IN (?)', [patientIds]);
+      // Extract the raw patient_id values for the SQL IN clause
+      const rawIds = patientIds.map(p => p.patient_id);
+      
+      const [rows] = await pool.query('SELECT MIN(id) as start_id, MAX(id) as end_id FROM upload_patients WHERE patient_id IN (?)', [rawIds]);
       if (rows && rows.length > 0) {
         const { start_id, end_id } = rows[0];
 
-        // Update or insert global status
-        const [existing] = await pool.query('SELECT id FROM upload_status LIMIT 1');
-        if (existing.length === 0) {
-          await pool.query('INSERT INTO upload_status (start, end) VALUES (?, ?)', [start_id, end_id]);
-        } else {
-          await pool.query('UPDATE upload_status SET start = ?, end = ?', [start_id, end_id]);
+        if (start_id !== null && end_id !== null) {
+          // Update or insert global status
+          const [existing] = await pool.query('SELECT id FROM upload_status LIMIT 1');
+          if (existing.length === 0) {
+            await pool.query('INSERT INTO upload_status (start, end) VALUES (?, ?)', [start_id, end_id]);
+          } else {
+            await pool.query('UPDATE upload_status SET start = ?, end = ?', [start_id, end_id]);
+          }
+          console.log(`Updated global batch status: start=${start_id}, end=${end_id}`);
+          
+          // Emit completion event to trigger next page on frontend
+          if (io) {
+            io.emit('batch_complete', { last_end_id: end_id });
+          }
         }
-        console.log(`Updated global batch status: start=${start_id}, end=${end_id}`);
       }
     }
   } catch (err) {
+
     console.error('Failed to update global upload_status:', err.message);
   }
 }
