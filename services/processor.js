@@ -28,7 +28,7 @@ async function updateStatus(patientId, status, io, logMessage = null) {
   }
 
   const now = new Date();
-  
+
   if (status === 'Success' || status === 'Error') {
     // Insert log
     await pool.query(`
@@ -44,15 +44,17 @@ async function updateStatus(patientId, status, io, logMessage = null) {
 async function processBatch(patientIds, io) {
   const externalApiUrl = process.env.EXTERNAL_API_URL;
 
-  for (const patientId of patientIds) {
+  for (const patient of patientIds) {
+    console.log("patient => ", patient)
+    const { id, patient_id: patientId } = patient
     try {
       console.log(`Starting process for patient: ${patientId}`);
       await updateStatus(patientId, 'Uploading', io, 'Starting upload...');
 
       // 1. Fetch BLOB data and filename
       const [rows] = await pool.query(
-        'SELECT BlobData, BlobFileName FROM vs_patienthistory WHERE PatientID = ?', 
-        [patientId]
+        'SELECT BlobData, BlobFileName FROM vs_patienthistory WHERE PatientID = ?',
+        [id]
       );
 
       if (!rows || rows.length === 0) {
@@ -67,7 +69,7 @@ async function processBatch(patientIds, io) {
         const buffer = Buffer.isBuffer(r.BlobData) ? r.BlobData : Buffer.from(r.BlobData);
         return { buffer, filename: r.BlobFileName };
       }).filter(f => f && f.buffer.length > 0);
-      
+
       if (files.length === 0) {
         await updateStatus(patientId, 'Success', io, 'No valid files to upload.');
         continue;
@@ -75,16 +77,16 @@ async function processBatch(patientIds, io) {
 
       // 2. Chunk files (Max 25 rule)
       const batches = chunkArray(files, 25);
-      
+
       let batchIndex = 1;
       for (const batch of batches) {
         console.log(`Patient ${patientId}: Sending batch ${batchIndex}/${batches.length} (${batch.length} files)`);
-        
+
         // 3. Construct FormData
         const form = new FormData();
         form.append('patient_id', String(patientId));
         form.append('date', new Date().toISOString());
-        
+
         batch.forEach((fileObj) => {
           // Explicitly wrap the buffer as a file with options so the external server writes it properly
           form.append('file[]', fileObj.buffer, {
@@ -93,7 +95,6 @@ async function processBatch(patientIds, io) {
             knownLength: fileObj.buffer.length
           });
         });
-
         // 4. Send sequentially to external API
         const response = await axios.post(externalApiUrl, form, {
           headers: {
@@ -107,7 +108,7 @@ async function processBatch(patientIds, io) {
         if (response.status !== 200 && response.status !== 201) {
           throw new Error(`External API returned status ${response.status}`);
         }
-        
+
         batchIndex++;
       }
 
@@ -116,7 +117,7 @@ async function processBatch(patientIds, io) {
       console.log(`Successfully completed patient: ${patientId}`);
 
     } catch (error) {
-      console.error(`Error processing patient ${patientId}:`,error.message);
+      console.error(`Error processing patient ${patientId}:`, error.message);
       await updateStatus(patientId, 'Error', io, `Failed: ${error.message}`);
     }
   }
@@ -127,7 +128,7 @@ async function processBatch(patientIds, io) {
       const [rows] = await pool.query('SELECT MIN(id) as start_id, MAX(id) as end_id FROM upload_patients WHERE patient_id IN (?)', [patientIds]);
       if (rows && rows.length > 0) {
         const { start_id, end_id } = rows[0];
-        
+
         // Update or insert global status
         const [existing] = await pool.query('SELECT id FROM upload_status LIMIT 1');
         if (existing.length === 0) {
