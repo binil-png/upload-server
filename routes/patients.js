@@ -2,13 +2,13 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const { processBatch } = require('../services/processor');
-
+const defaultLimit = 25
 // GET /api/last-batch
 // Returns the last processed end_id and the suggested next page.
 router.get('/last-batch', async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT end FROM upload_status LIMIT 1');
-    const limit = parseInt(req.query.limit) || 50;
+    const limit = parseInt(req.query.limit) || defaultLimit;
 
     if (rows.length === 0) {
       return res.json({ last_end_id: 0, next_page: 1 });
@@ -32,7 +32,7 @@ router.get('/last-batch', async (req, res) => {
 router.get('/patients', async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 50;
+    const limit = parseInt(req.query.limit) || defaultLimit;
     const offset = (page - 1) * limit;
 
     const [rows] = await pool.query(`
